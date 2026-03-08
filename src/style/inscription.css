@@ -1,0 +1,133 @@
+/* Fichier: Inscription.css */
+
+/* Conteneur principal: Centrage sur la page */
+.inscription-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh; /* Prend toute la hauteur de la vue */
+    background-color: #f0f2f5; /* Arrière-plan doux */
+    padding: 20px;
+}
+
+/* Carte/Formulaire */
+.inscription-card {
+    background-color: #ffffff;
+    padding: 40px;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 400px; /* Limite la largeur du formulaire */
+    transition: transform 0.3s ease-in-out;
+}
+
+.inscription-card h2 {
+    text-align: center;
+    margin-bottom: 30px;
+    color: #333;
+    font-size: 1.8em;
+    font-weight: 700;
+}
+
+/* Groupe d'input */
+.input-group {
+    margin-bottom: 20px;
+}
+
+.input-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #555;
+    font-size: 0.9em;
+}
+
+.input-group input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    box-sizing: border-box; 
+    transition: border-color 0.3s;
+}
+
+.input-group input:focus {
+    border-color: #007bff; /* Couleur primaire pour le focus */
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+}
+
+/* Bouton de soumission */
+.submit-btn {
+    width: 100%;
+    padding: 15px;
+    background-color: #007bff; 
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.1em;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color 0.3s, transform 0.1s;
+    margin-top: 10px;
+}
+
+.submit-btn:hover {
+    background-color: #0056b3;
+}
+
+.submit-btn:active {
+    transform: scale(0.99);
+}
+
+/* Lien de connexion */
+.login-link {
+    text-align: center;
+    margin-top: 25px;
+    font-size: 0.9em;
+    color: #666;
+}
+
+.login-link a {
+    color: #007bff;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.login-link a:hover {
+    text-decoration: underline;
+}
+
+/* Messages d'état (Erreur/Succès) */
+.message {
+    padding: 10px 15px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+    font-weight: 500;
+    text-align: center;
+}
+
+.success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+/* Media Query pour les petits écrans (s'assurer de la responsivité) */
+@media (max-width: 480px) {
+    .inscription-card {
+        padding: 30px 20px;
+        box-shadow: none; 
+    }
+
+    .inscription-container {
+        padding: 0;
+        background-color: #fff; 
+    }
+}
