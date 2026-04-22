@@ -423,5 +423,27 @@ class Enseignant {
         
         return $row['total'];
     }
+
+    // Mettre à jour un document spécifique
+    public function updateDocument($document_type, $document_nom) {
+        try {
+            $column_nom = $document_type . '_nom';
+            
+            $query = "UPDATE enseignants 
+                      SET {$column_nom} = :document_nom,
+                          date_modification = CURRENT_TIMESTAMP
+                      WHERE id = :id";
+            
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindParam(':document_nom', $document_nom);
+            $stmt->bindParam(':id', $this->id);
+            
+            return $stmt->execute();
+            
+        } catch (PDOException $e) {
+            error_log("Erreur mise à jour document enseignant: " . $e->getMessage());
+            return false;
+        }
+    }
 }
 ?>

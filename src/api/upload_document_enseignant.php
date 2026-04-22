@@ -2,7 +2,7 @@
 include_once './head.php';
 
 include_once './database.php';
-include_once './Etudiant.php';
+include_once './Enseignant.php';
 
 $response = array("success" => false, "message" => "");
 
@@ -14,29 +14,29 @@ try {
         throw new Exception("Erreur de connexion à la base de données");
     }
 
-    $etudiant = new Etudiant($db);
+    $enseignant = new Enseignant($db);
 
     if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-        $etudiant_id = $_POST['etudiant_id'] ?? '';
+        $enseignant_id = $_POST['enseignant_id'] ?? '';
         $document_type = $_POST['document_type'] ?? '';
 
-        if (empty($etudiant_id) || empty($document_type)) {
-            $response["message"] = "ID étudiant ou type de document manquant.";
+        if (empty($enseignant_id) || empty($document_type)) {
+            $response["message"] = "ID enseignant ou type de document manquant.";
             echo json_encode($response);
             exit;
         }
 
-        // Vérifier les types de documents autorisés
-        $allowed_document_types = array('acte_naissance', 'cip', 'diplome_bac', 'photo', 'recu_inscription');
+        // Vérifier les types de documents autorisés pour les enseignants
+        $allowed_document_types = array('cv', 'diplome', 'certificat_nationalite');
         if (!in_array($document_type, $allowed_document_types)) {
-            $response["message"] = "Type de document non autorisé.";
+            $response["message"] = "Type de document non autorisé pour un enseignant.";
             echo json_encode($response);
             exit;
         }
 
-        $etudiant->id = $etudiant_id;
-        if (!$etudiant->readOne()) {
-            $response["message"] = "Étudiant non trouvé.";
+        $enseignant->id = $enseignant_id;
+        if (!$enseignant->readOne()) {
+            $response["message"] = "Enseignant non trouvé.";
             echo json_encode($response);
             exit;
         }
@@ -62,20 +62,20 @@ try {
                 exit;
             }
 
-            // Créer le dossier de stockage spécifique au type de document
-            $upload_dir = "../uploads/{$document_type}/";
+            // Créer le dossier de stockage spécifique pour les enseignants
+            $upload_dir = "../uploads/documents_enseignants/";
             if (!is_dir($upload_dir)) {
                 if (!mkdir($upload_dir, 0755, true)) {
-                    $response["message"] = "Impossible de créer le dossier de stockage pour {$document_type}.";
+                    $response["message"] = "Impossible de créer le dossier de stockage pour les documents enseignants.";
                     echo json_encode($response);
                     exit;
                 }
             }
 
             // Générer un nom unique pour le document
-            $document_nom = "{$document_type}_{$etudiant_id}_" . time() . '.' . $file_extension;
+            $document_nom = "enseignant_{$enseignant_id}_{$document_type}_" . time() . '.' . $file_extension;
             $document_path = $upload_dir . $document_nom;
-            $document_url = "../uploads/{$document_type}/" . $document_nom;
+            $document_url = "documents_enseignants/" . $document_nom; // URL relative par rapport à uploads/
 
             // Déplacer le fichier uploadé
             if (!move_uploaded_file($document['tmp_name'], $document_path)) {
@@ -85,10 +85,10 @@ try {
             }
 
             // Mettre à jour la base de données
-            if ($etudiant->updateDocument($document_type, $document_nom, $document_url)) {
+            if ($enseignant->updateDocument($document_type, $document_nom)) {
                 $response["success"] = true;
-                $response["message"] = "Document uploadé avec succès !";
-                $response["document_url"] = $document_url;
+                $response["message"] = "Document enseignant uploadé avec succès !";
+                $response["document_url"] = "../uploads/" . $document_url;
             } else {
                 $response["message"] = "Erreur lors de la mise à jour de la base de données.";
             }
@@ -101,7 +101,7 @@ try {
     }
 } catch (Exception $e) {
     $response["message"] = "Erreur serveur: " . $e->getMessage();
-    error_log("Erreur dans upload_document.php: " . $e->getMessage());
+    error_log("Erreur dans upload_document_enseignant.php: " . $e->getMessage());
     http_response_code(500);
 }
 

@@ -1,9 +1,9 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { Search, CheckCircle, XCircle, User, Calendar, Mail, Phone, MapPin, BookOpen, FileText, Filter, Download, Eye, Camera, Upload, Loader2, GraduationCap } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { URL_BASE , API_URL_BASE} from '../api/api';
+import { URL_BASE, API_URL_BASE } from '../api/api';
 import axios from 'axios';
-import {anneesAcademiques , filieres} from '../data/news'; 
+import { anneesAcademiques, filieres } from '../data/news';
 
 import { useLocation } from 'react-router-dom';
 
@@ -41,153 +41,202 @@ const Secretariat = () => {
   const [enseignantToReject, setEnseignantToReject] = useState(null);
   const [refusalReasonEnseignant, setRefusalReasonEnseignant] = useState('');
   const [editingEnseignant, setEditingEnseignant] = useState(null);
+  const [previewFile, setPreviewFile] = useState(null); // { url, type, title }
 
   const navigate = useNavigate();
   const location = useLocation();
 
 
-  
 
 
- useEffect ( () => {
-  location.state?.user ? setSecretaire(location.state.user) : navigate('/LoginSecretaire');
- },[])
+
+  useEffect(() => {
+    location.state?.user ? setSecretaire(location.state.user) : navigate('/LoginSecretaire');
+  }, [])
 
 
- // Fonctions pour gérer les modals d'étudiants
-const ouvrirModalValidation = (id) => {
-  setInscriptionToValidate(id);
-  setShowValidationModal(true);
-  setRecuFile(null);
-  setRecuPreview(null);
-  setSelectedDocuments({});
-  setDocumentPreviews({});
-};
-
-const ouvrirModalRefus = (id) => {
-  setInscriptionToReject(id);
-  setShowRefusalModal(true);
-  setRefusalReason('');
-};
-
-// Fonction pour gérer le changement de reçu
-const handleRecuChange = (e) => {
-  const file = e.target.files[0];
-  
-  if (!file) {
+  // Fonctions pour gérer les modals d'étudiants
+  const ouvrirModalValidation = (id) => {
+    setInscriptionToValidate(id);
+    setShowValidationModal(true);
     setRecuFile(null);
     setRecuPreview(null);
-    return;
-  }
+    setSelectedDocuments({});
+    setDocumentPreviews({});
+  };
 
-  const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
-  if (!allowedTypes.includes(file.type)) {
-    alert('Format de fichier non supporté. Utilisez JPG, JPEG, PNG ou PDF.');
-    e.target.value = '';
-    return;
-  }
+  const ouvrirModalRefus = (id) => {
+    setInscriptionToReject(id);
+    setShowRefusalModal(true);
+    setRefusalReason('');
+  };
 
-  const maxSize = 10 * 1024 * 1024;
-  if (file.size > maxSize) {
-    alert('Le reçu ne doit pas dépasser 10 Mo.');
-    e.target.value = '';
-    return;
-  }
+  // Fonction pour gérer le changement de reçu
+  const handleRecuChange = (e) => {
+    const file = e.target.files[0];
 
-  setRecuFile(file);
-
-  if (file.type.startsWith('image/')) {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      setRecuPreview(e.target.result);
-    };
-    reader.readAsDataURL(file);
-  } else {
-    setRecuPreview(null);
-  }
-};
-
-// Fonction pour gérer les documents des étudiants
-const handleDocumentChange = (e, etudiantId, documentType) => {
-  const file = e.target.files[0];
-  const key = `${etudiantId}_${documentType}`;
-  
-  if (!file) {
-    setSelectedDocuments(prev => {
-      const newState = { ...prev };
-      delete newState[key];
-      return newState;
-    });
-    setDocumentPreviews(prev => {
-      const newState = { ...prev };
-      delete newState[key];
-      return newState;
-    });
-    return;
-  }
-
-  const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
-  if (!allowedTypes.includes(file.type)) {
-    alert('Format de fichier non supporté. Utilisez JPG, JPEG, PNG ou PDF.');
-    e.target.value = '';
-    return;
-  }
-
-  const maxSize = 10 * 1024 * 1024;
-  if (file.size > maxSize) {
-    alert('Le document ne doit pas dépasser 10 Mo.');
-    e.target.value = '';
-    return;
-  }
-
-  setSelectedDocuments(prev => ({ ...prev, [key]: file }));
-
-  if (file.type.startsWith('image/')) {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      setDocumentPreviews(prev => ({ ...prev, [key]: e.target.result }));
-    };
-    reader.readAsDataURL(file);
-  } else {
-    setDocumentPreviews(prev => ({ ...prev, [key]: null }));
-  }
-};
-
-// Fonction pour valider une inscription
-const validerInscription = async (id) => {
-  if (!recuFile) {
-    alert('Veuillez sélectionner un reçu d\'inscription');
-    return;
-  }
-
-  const formData = new FormData();
-  formData.append('etudiant_id', id);
-  formData.append('recu_inscription', recuFile);
-
-  // Ajouter les documents supplémentaires sélectionnés
-  Object.keys(selectedDocuments).forEach(key => {
-    if (key.startsWith(`${id}_`)) {
-      const documentType = key.replace(`${id}_`, '');
-      const file = selectedDocuments[key];
-      formData.append(documentType, file);
+    if (!file) {
+      setRecuFile(null);
+      setRecuPreview(null);
+      return;
     }
-  });
 
-  try {
-    setGlobalLoading(true);
-    const response = await fetch(URL_BASE.VALIDER_INSCRIPTION(), {
-      method: 'POST',
-      body: formData
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
+    if (!allowedTypes.includes(file.type)) {
+      alert('Format de fichier non supporté. Utilisez JPG, JPEG, PNG ou PDF.');
+      e.target.value = '';
+      return;
+    }
+
+    const maxSize = 10 * 1024 * 1024;
+    if (file.size > maxSize) {
+      alert('Le reçu ne doit pas dépasser 10 Mo.');
+      e.target.value = '';
+      return;
+    }
+
+    setRecuFile(file);
+
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setRecuPreview(e.target.result);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setRecuPreview(null);
+    }
+  };
+
+  // Fonction pour gérer les documents des étudiants
+  const handleDocumentChange = (e, etudiantId, documentType) => {
+    const file = e.target.files[0];
+    const key = `${etudiantId}_${documentType}`;
+
+    if (!file) {
+      setSelectedDocuments(prev => {
+        const newState = { ...prev };
+        delete newState[key];
+        return newState;
+      });
+      setDocumentPreviews(prev => {
+        const newState = { ...prev };
+        delete newState[key];
+        return newState;
+      });
+      return;
+    }
+
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
+    if (!allowedTypes.includes(file.type)) {
+      alert('Format de fichier non supporté. Utilisez JPG, JPEG, PNG ou PDF.');
+      e.target.value = '';
+      return;
+    }
+
+    const maxSize = 10 * 1024 * 1024;
+    if (file.size > maxSize) {
+      alert('Le document ne doit pas dépasser 10 Mo.');
+      e.target.value = '';
+      return;
+    }
+
+    setSelectedDocuments(prev => ({ ...prev, [key]: file }));
+
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setDocumentPreviews(prev => ({ ...prev, [key]: e.target.result }));
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setDocumentPreviews(prev => ({ ...prev, [key]: null }));
+    }
+  };
+
+  // Fonction pour gérer les documents des enseignants
+  const handleDocumentChangeEnseignant = (e, enseignantId, documentType) => {
+
+    const file = e.target.files[0];
+    const key = `enseignant_${enseignantId}_${documentType}`;
+
+    if (!file) {
+      setSelectedDocuments(prev => {
+        const newState = { ...prev };
+        delete newState[key];
+        return newState;
+      });
+      setDocumentPreviews(prev => {
+        const newState = { ...prev };
+        delete newState[key];
+        return newState;
+      });
+      return;
+    }
+
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
+    if (!allowedTypes.includes(file.type)) {
+      alert('Format de fichier non supporté. Utilisez JPG, JPEG, PNG ou PDF.');
+      e.target.value = '';
+      return;
+    }
+
+    const maxSize = 10 * 1024 * 1024;
+    if (file.size > maxSize) {
+      alert('Le document ne doit pas dépasser 10 Mo.');
+      e.target.value = '';
+      return;
+    }
+
+    setSelectedDocuments(prev => ({ ...prev, [key]: file }));
+
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setDocumentPreviews(prev => ({ ...prev, [key]: e.target.result }));
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setDocumentPreviews(prev => ({ ...prev, [key]: null }));
+    }
+  };
+
+
+  // Fonction pour valider une inscription
+  const validerInscription = async (id) => {
+    if (!recuFile) {
+      alert('Veuillez sélectionner un reçu d\'inscription');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('etudiant_id', id);
+    formData.append('recu_inscription', recuFile);
+
+    // Ajouter les documents supplémentaires sélectionnés
+    Object.keys(selectedDocuments).forEach(key => {
+      if (key.startsWith(`${id}_`)) {
+        const documentType = key.replace(`${id}_`, '');
+        const file = selectedDocuments[key];
+        formData.append(documentType, file);
+      }
     });
 
-    const data = await response.json();
+    try {
+      setGlobalLoading(true);
+      const response = await fetch(URL_BASE.VALIDER_INSCRIPTION(), {
+        method: 'POST',
+        body: formData
+      });
 
-    if (data.success) {
-      // Mettre à jour l'état local
-      setInscriptions(inscriptions.map(ins => 
-        ins.id === id 
-          ? { 
-              ...ins, 
+      const data = await response.json();
+
+      if (data.success) {
+        // Mettre à jour l'état local
+        setInscriptions(inscriptions.map(ins =>
+          ins.id === id
+            ? {
+              ...ins,
               statut: 'validee',
               matricule: data.matricule,
               recuInscription: data.recu_nom,
@@ -197,118 +246,228 @@ const validerInscription = async (id) => {
                 url: data.document_urls?.[doc.type] || doc.url
               }))
             }
-          : ins
-      ));
-      
-      setShowValidationModal(false);
-      setRecuFile(null);
-      setRecuPreview(null);
-      setSelectedDocuments({});
-      setDocumentPreviews({});
-      
-      Swal.fire({
-        title: 'Succès !',
-        text: 'Inscription validée avec succès !',
-        icon: 'success',
-        confirmButtonText: 'OK'
-      }).then( (result) => {
-        if(result.isConfirmed){
-          window.location.reload()
-        }
-      });
-    } else {
+            : ins
+        ));
+
+        setShowValidationModal(false);
+        setRecuFile(null);
+        setRecuPreview(null);
+        setSelectedDocuments({});
+        setDocumentPreviews({});
+
+        Swal.fire({
+          title: 'Succès !',
+          text: 'Inscription validée avec succès !',
+          icon: 'success',
+          confirmButtonText: 'OK'
+        }).then((result) => {
+          if (result.isConfirmed) {
+            window.location.reload()
+          }
+        });
+      } else {
+        Swal.fire({
+          title: 'Erreur',
+          text: 'Erreur: ' + data.message,
+          icon: 'error',
+          confirmButtonText: 'OK'
+        });
+      }
+    } catch (error) {
+      console.error('Erreur lors de la validation:', error);
       Swal.fire({
         title: 'Erreur',
-        text: 'Erreur: ' + data.message,
+        text: 'Erreur de connexion au serveur.',
         icon: 'error',
         confirmButtonText: 'OK'
       });
+    } finally {
+      setGlobalLoading(false);
     }
-  } catch (error) {
-    console.error('Erreur lors de la validation:', error);
-    Swal.fire({
-      title: 'Erreur',
-      text: 'Erreur de connexion au serveur.',
-      icon: 'error',
-      confirmButtonText: 'OK'
-    });
-  } finally {
-    setGlobalLoading(false);
-  }
-};
-// Fonction pour rejeter une inscription
-const rejeterInscription = async () => {
-  if (!refusalReason.trim()) {
-    Swal.fire({
-      title: 'Raison manquante',
-      text: 'Veuillez saisir la raison du refus',
-      icon: 'warning',
-      confirmButtonText: 'OK'
-    });
-    return;
-  }
-  try {
-    setGlobalLoading(true);
-    const response = await fetch(URL_BASE.REJETER_ETUDIANT(), {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        etudiant_id: inscriptionToReject,
-        raison_refus: refusalReason
-      })
-    });
+  };
 
-    const data = await response.json();
+  // Fonction pour mettre à jour un document spécifique sur le serveur
+  const handleUpdateServerDocument = async (etudiantId, documentType) => {
+    const documentKey = `${etudiantId}_${documentType}`;
+    const file = selectedDocuments[documentKey];
 
-    if (data.success) {
-      setInscriptions(inscriptions.map(ins => 
-        ins.id === inscriptionToReject 
-          ? { ...ins, statut: 'rejetee', raisonRefus: refusalReason }
-          : ins
-      ));
-      setShowRefusalModal(false);
-      setSelectedInscription(null);
-      setRefusalReason('');
-      setInscriptionToReject(null);
+    if (!file) {
       Swal.fire({
-        title: 'Succès !',
-        text: 'Inscription rejetée avec succès.',
-        icon: 'success',
+        title: 'Fichier manquant',
+        text: 'Veuillez sélectionner un fichier à uploader',
+        icon: 'warning',
         confirmButtonText: 'OK'
-      }).then( (result) => {
-        if(result.isConfirmed){
-          window.location.reload()
-        }
       });
-    } else {
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('etudiant_id', etudiantId);
+    formData.append('document_type', documentType);
+    formData.append('document_file', file);
+
+    try {
+      setUploadingDocuments(prev => ({ ...prev, [documentKey]: true }));
+      const response = await fetch(URL_BASE.UPLOAD_DOCUMENT(), {
+        method: 'POST',
+        body: formData
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Mettre à jour l'état local des inscriptions
+        setInscriptions(prev => prev.map(ins => {
+          if (ins.id === etudiantId) {
+            if (documentType === 'recu_inscription') {
+              // Extraire le nom du fichier du chemin complet retourné par l'API
+              const fileName = data.document_url.split('/').pop();
+              return { ...ins, recuInscription: fileName };
+            } else {
+              return {
+                ...ins,
+                documents: ins.documents.map(doc =>
+                  doc.type === documentType
+                    ? { ...doc, url: data.document_url, statut: 'valide' }
+                    : doc
+                )
+              };
+            }
+          }
+          return ins;
+        }));
+
+        // Mettre à jour également l'inscription sélectionnée si elle est ouverte
+        if (selectedInscription && selectedInscription.id === etudiantId) {
+          setSelectedInscription(prev => {
+            if (documentType === 'recu_inscription') {
+              const fileName = data.document_url.split('/').pop();
+              return { ...prev, recuInscription: fileName };
+            } else {
+              return {
+                ...prev,
+                documents: prev.documents.map(doc =>
+                  doc.type === documentType
+                    ? { ...doc, url: data.document_url, statut: 'valide' }
+                    : doc
+                )
+              };
+            }
+          });
+        }
+
+        // Nettoyer la sélection locale
+        setSelectedDocuments(prev => {
+          const newState = { ...prev };
+          delete newState[documentKey];
+          return newState;
+        });
+        setDocumentPreviews(prev => {
+          const newState = { ...prev };
+          delete newState[documentKey];
+          return newState;
+        });
+
+        Swal.fire({
+          title: 'Succès !',
+          text: 'Le document a été mis à jour avec succès.',
+          icon: 'success',
+          confirmButtonText: 'OK'
+        });
+      } else {
+        Swal.fire({
+          title: 'Erreur',
+          text: data.message || 'Une erreur est survenue lors de l\'upload.',
+          icon: 'error',
+          confirmButtonText: 'OK'
+        });
+      }
+    } catch (error) {
+      console.error('Erreur lors de l\'upload:', error);
       Swal.fire({
         title: 'Erreur',
-        text: 'Erreur: ' + data.message,
+        text: 'Impossible de contacter le serveur.',
         icon: 'error',
         confirmButtonText: 'OK'
       });
+    } finally {
+      setUploadingDocuments(prev => ({ ...prev, [documentKey]: false }));
     }
-  } catch (error) {
-    console.error('Erreur lors du rejet:', error);
-    Swal.fire({
-      title: 'Erreur',
-      text: 'Erreur de connexion au serveur.',
-      icon: 'error',
-      confirmButtonText: 'OK'
-    });
-  } finally {
-    setGlobalLoading(false);
-  }
-};
+  };
 
-// Fonction pour mettre à jour un étudiant
-const mettreAJourEtudiant = (id, nouvellesInfos) => {
-  setInscriptions(inscriptions.map(ins => 
-    ins.id === id 
-      ? { 
-          ...ins, 
+  // Fonction pour rejeter une inscription
+  const rejeterInscription = async () => {
+    if (!refusalReason.trim()) {
+      Swal.fire({
+        title: 'Raison manquante',
+        text: 'Veuillez saisir la raison du refus',
+        icon: 'warning',
+        confirmButtonText: 'OK'
+      });
+      return;
+    }
+    try {
+      setGlobalLoading(true);
+      const response = await fetch(URL_BASE.REJETER_ETUDIANT(), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          etudiant_id: inscriptionToReject,
+          raison_refus: refusalReason
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setInscriptions(inscriptions.map(ins =>
+          ins.id === inscriptionToReject
+            ? { ...ins, statut: 'rejetee', raisonRefus: refusalReason }
+            : ins
+        ));
+        setShowRefusalModal(false);
+        setSelectedInscription(null);
+        setRefusalReason('');
+        setInscriptionToReject(null);
+        Swal.fire({
+          title: 'Succès !',
+          text: 'Inscription rejetée avec succès.',
+          icon: 'success',
+          confirmButtonText: 'OK'
+        }).then((result) => {
+          if (result.isConfirmed) {
+            window.location.reload()
+          }
+        });
+      } else {
+        Swal.fire({
+          title: 'Erreur',
+          text: 'Erreur: ' + data.message,
+          icon: 'error',
+          confirmButtonText: 'OK'
+        });
+      }
+    } catch (error) {
+      console.error('Erreur lors du rejet:', error);
+      Swal.fire({
+        title: 'Erreur',
+        text: 'Erreur de connexion au serveur.',
+        icon: 'error',
+        confirmButtonText: 'OK'
+      });
+    } finally {
+      setGlobalLoading(false);
+    }
+  };
+
+  // Fonction pour mettre à jour un étudiant
+  const mettreAJourEtudiant = (id, nouvellesInfos) => {
+    setInscriptions(inscriptions.map(ins =>
+      ins.id === id
+        ? {
+          ...ins,
           ...nouvellesInfos,
           nom: nouvellesInfos.nom || ins.nom,
           prenom: nouvellesInfos.prenom || ins.prenom,
@@ -320,17 +479,113 @@ const mettreAJourEtudiant = (id, nouvellesInfos) => {
           anneeAcademique: nouvellesInfos.anneeAcademique || ins.anneeAcademique,
           filiere: nouvellesInfos.filiere || ins.filiere
         }
-      : ins
-  ));
-  setEditingStudent(null);
-};
+        : ins
+    ));
+    setEditingStudent(null);
+  };
+
+  // Fonction pour mettre à jour un document enseignant spécifique sur le serveur
+  const handleUpdateServerDocumentEnseignant = async (enseignantId, documentType) => {
+    const documentKey = `${enseignantId}_${documentType}`;
+    const file = selectedDocuments[documentKey];
+
+    if (!file) {
+      Swal.fire({
+        title: 'Fichier manquant',
+        text: 'Veuillez sélectionner un fichier à uploader',
+        icon: 'warning',
+        confirmButtonText: 'OK'
+      });
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('enseignant_id', enseignantId);
+    formData.append('document_type', documentType);
+    formData.append('document_file', file);
+
+    try {
+      setUploadingDocuments(prev => ({ ...prev, [documentKey]: true }));
+      const response = await fetch(URL_BASE.UPLOAD_DOCUMENT_ENSEIGNANT(), {
+        method: 'POST',
+        body: formData
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Mettre à jour l'état local des enseignants
+        setEnseignants(prev => prev.map(ens => {
+          if (ens.id === enseignantId) {
+            return {
+              ...ens,
+              documents: ens.documents.map(doc =>
+                doc.type === documentType
+                  ? { ...doc, url: data.document_url, statut: 'valide' }
+                  : doc
+              )
+            };
+          }
+          return ens;
+        }));
+
+        // Mettre à jour également l'enseignant sélectionné si il est ouvert
+        if (selectedEnseignant && selectedEnseignant.id === enseignantId) {
+          setSelectedEnseignant(prev => ({
+            ...prev,
+            documents: prev.documents.map(doc =>
+              doc.type === documentType
+                ? { ...doc, url: data.document_url, statut: 'valide' }
+                : doc
+            )
+          }));
+        }
+
+        // Nettoyer la sélection locale
+        setSelectedDocuments(prev => {
+          const newState = { ...prev };
+          delete newState[documentKey];
+          return newState;
+        });
+        setDocumentPreviews(prev => {
+          const newState = { ...prev };
+          delete newState[documentKey];
+          return newState;
+        });
+
+        Swal.fire({
+          title: 'Succès !',
+          text: 'Le document de l\'enseignant a été mis à jour avec succès.',
+          icon: 'success',
+          confirmButtonText: 'OK'
+        });
+      } else {
+        Swal.fire({
+          title: 'Erreur',
+          text: data.message || 'Une erreur est survenue lors de l\'upload.',
+          icon: 'error',
+          confirmButtonText: 'OK'
+        });
+      }
+    } catch (error) {
+      console.error('Erreur lors de l\'upload enseignant:', error);
+      Swal.fire({
+        title: 'Erreur',
+        text: 'Impossible de contacter le serveur.',
+        icon: 'error',
+        confirmButtonText: 'OK'
+      });
+    } finally {
+      setUploadingDocuments(prev => ({ ...prev, [documentKey]: false }));
+    }
+  };
 
   // Ajouter cette fonction après les autres fonctions pour les enseignants
-const mettreAJourEnseignant = (id, nouvellesInfos) => {
-  setEnseignants(enseignants.map(ens => 
-    ens.id === id 
-      ? { 
-          ...ens, 
+  const mettreAJourEnseignant = (id, nouvellesInfos) => {
+    setEnseignants(enseignants.map(ens =>
+      ens.id === id
+        ? {
+          ...ens,
           ...nouvellesInfos,
           nom: nouvellesInfos.nom || ens.nom,
           prenom: nouvellesInfos.prenom || ens.prenom,
@@ -345,21 +600,21 @@ const mettreAJourEnseignant = (id, nouvellesInfos) => {
           filiereEnseignee: nouvellesInfos.filiereEnseignee || ens.filiereEnseignee,
           coursEnseignes: nouvellesInfos.coursEnseignes || ens.coursEnseignes
         }
-      : ens
-  ));
-  setEditingEnseignant(null);
-};
+        : ens
+    ));
+    setEditingEnseignant(null);
+  };
 
   // Récupérer les étudiants depuis l'API
   const fetchEtudiants = async () => {
     try {
       setLoading(true);
       setError(null);
-  
+
       const response = await axios.get(URL_BASE.GET_ETUDIANTS(), {
         headers: { 'Accept': 'application/json' },
       });
-  
+
       const data = response.data;
 
       if (data.success && Array.isArray(data.data)) {
@@ -381,38 +636,38 @@ const mettreAJourEnseignant = (id, nouvellesInfos) => {
           photo: etudiant.photo_nom,
           recuInscription: etudiant.recu_inscription_nom,
           documents: [
-            { 
-              nom: 'Acte de naissance', 
-              type: 'acte_naissance', 
-              url: etudiant.acte_naissance_url || '#', 
-              statut: etudiant.acte_naissance_nom ? 'valide' : 'en_attente' 
+            {
+              nom: 'Acte de naissance',
+              type: 'acte_naissance',
+              url: etudiant.acte_naissance_url || '#',
+              statut: etudiant.acte_naissance_nom ? 'valide' : 'en_attente'
             },
-            { 
-              nom: 'Carte CIP', 
-              type: 'cip', 
-              url: etudiant.cip_url || '#', 
-              statut: etudiant.cip_nom ? 'valide' : 'en_attente' 
+            {
+              nom: 'Carte CIP',
+              type: 'cip',
+              url: etudiant.cip_url || '#',
+              statut: etudiant.cip_nom ? 'valide' : 'en_attente'
             },
-            { 
-              nom: 'Diplôme de Bac', 
-              type: 'diplome_bac', 
-              url: etudiant.diplome_bac_url || '#', 
-              statut: etudiant.diplome_bac_nom ? 'valide' : 'en_attente' 
+            {
+              nom: 'Diplôme de Bac',
+              type: 'diplome_bac',
+              url: etudiant.diplome_bac_url || '#',
+              statut: etudiant.diplome_bac_nom ? 'valide' : 'en_attente'
             },
-            { 
-              nom: 'Photo d\'identité', 
-              type: 'photo', 
-              url: etudiant.photo_url ? `${URL_BASE.UPLOADS_PHOTOS()}/${etudiant.photo_url}` : '#', 
-              statut: etudiant.photo_nom ? 'valide' : 'en_attente' 
+            {
+              nom: 'Photo d\'identité',
+              type: 'photo',
+              url: etudiant.photo_url ? `${URL_BASE.UPLOADS_PHOTOS()}/${etudiant.photo_url}` : '#',
+              statut: etudiant.photo_nom ? 'valide' : 'en_attente'
             }
           ]
         }));
-  
+
         setInscriptions(transformedData);
       } else {
         setInscriptions([]);
       }
-  
+
     } catch (error) {
       setError(error.message);
       setInscriptions([
@@ -476,29 +731,29 @@ const mettreAJourEnseignant = (id, nouvellesInfos) => {
           raisonRefus: enseignant.raison_refus || '',
           photo: enseignant.photo_nom,
           documents: [
-            { 
-              nom: 'Curriculum Vitae', 
-              type: 'cv', 
-              url: enseignant.cv_url || '#', 
-              statut: enseignant.cv_nom ? 'valide' : 'en_attente' 
+            {
+              nom: 'Curriculum Vitae',
+              type: 'cv',
+              url: enseignant.cv_url || '#',
+              statut: enseignant.cv_nom ? 'valide' : 'en_attente'
             },
-            { 
-              nom: 'Diplôme le plus élevé', 
-              type: 'diplome', 
-              url: enseignant.diplome_url || '#', 
-              statut: enseignant.diplome_nom ? 'valide' : 'en_attente' 
+            {
+              nom: 'Diplôme le plus élevé',
+              type: 'diplome',
+              url: enseignant.diplome_url || '#',
+              statut: enseignant.diplome_nom ? 'valide' : 'en_attente'
             },
-            { 
-              nom: 'Certificat de nationalité', 
-              type: 'certificat_nationalite', 
-              url: enseignant.certificat_nationalite_url || '#', 
-              statut: enseignant.certificat_nationalite_nom ? 'valide' : 'en_attente' 
+            {
+              nom: 'Certificat de nationalité',
+              type: 'certificat_nationalite',
+              url: enseignant.certificat_nationalite_url || '#',
+              statut: enseignant.certificat_nationalite_nom ? 'valide' : 'en_attente'
             },
-            { 
-              nom: 'Photo d\'identité', 
-              type: 'photo', 
-              url: enseignant.photo_url ? `${URL_BASE.UPLOADS_PHOTOS_ENSEIGNANTS()}/${enseignant.photo_url}` : '#', 
-              statut: enseignant.photo_nom ? 'valide' : 'en_attente' 
+            {
+              nom: 'Photo d\'identité',
+              type: 'photo',
+              url: enseignant.photo_url ? `${URL_BASE.UPLOADS_PHOTOS_ENSEIGNANTS()}/${enseignant.photo_url}` : '#',
+              statut: enseignant.photo_nom ? 'valide' : 'en_attente'
             }
           ]
         }));
@@ -541,7 +796,7 @@ const mettreAJourEnseignant = (id, nouvellesInfos) => {
       setLoadingEnseignants(false);
     }
   };
-  
+
   useEffect(() => {
     fetchEtudiants();
     fetchEnseignants();
@@ -553,9 +808,9 @@ const mettreAJourEnseignant = (id, nouvellesInfos) => {
     try {
       const date = new Date(dateString);
       const datePart = date.toLocaleDateString('fr-FR');
-      const timePart = date.toLocaleTimeString('fr-FR', { 
-        hour: '2-digit', 
-        minute: '2-digit' 
+      const timePart = date.toLocaleTimeString('fr-FR', {
+        hour: '2-digit',
+        minute: '2-digit'
       });
       return `${datePart} à ${timePart} min`;
     } catch {
@@ -569,64 +824,18 @@ const mettreAJourEnseignant = (id, nouvellesInfos) => {
     localStorage.removeItem('session_token');
     localStorage.removeItem('user_info');
     localStorage.removeItem('user_role');
-    
+
     // Rediriger vers la page de connexion
     navigate('/LoginSecretaire');
   };
 
-// Utilisations :
-// formatDate(dateString) // "25/12/2024 à 14:30"
-// formatDate(dateString, { hour: '2-digit', minute: '2-digit' }) // "25/12/2024, 14:30"
-// formatDate(dateString, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) // "mercredi 25 décembre 2024"
+  // Utilisations :
+  // formatDate(dateString) // "25/12/2024 à 14:30"
+  // formatDate(dateString, { hour: '2-digit', minute: '2-digit' }) // "25/12/2024, 14:30"
+  // formatDate(dateString, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) // "mercredi 25 décembre 2024"
 
   const getAnneeAcademique = (filiere) => {
     return filiere || '1ere année';
-  };
-
-  // Gestion des documents pour enseignants
-  const handleDocumentChangeEnseignant = (e, enseignantId, documentType) => {
-    const file = e.target.files[0];
-    const key = `enseignant_${enseignantId}_${documentType}`;
-    
-    if (!file) {
-      setSelectedDocuments(prev => {
-        const newState = { ...prev };
-        delete newState[key];
-        return newState;
-      });
-      setDocumentPreviews(prev => {
-        const newState = { ...prev };
-        delete newState[key];
-        return newState;
-      });
-      return;
-    }
-
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
-    if (!allowedTypes.includes(file.type)) {
-      alert('Format de fichier non supporté. Utilisez JPG, JPEG, PNG ou PDF.');
-      e.target.value = '';
-      return;
-    }
-
-    const maxSize = 10 * 1024 * 1024;
-    if (file.size > maxSize) {
-      alert('Le document ne doit pas dépasser 10 Mo.');
-      e.target.value = '';
-      return;
-    }
-
-    setSelectedDocuments(prev => ({ ...prev, [key]: file }));
-
-    if (file.type.startsWith('image/')) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setDocumentPreviews(prev => ({ ...prev, [key]: e.target.result }));
-      };
-      reader.readAsDataURL(file);
-    } else {
-      setDocumentPreviews(prev => ({ ...prev, [key]: null }));
-    }
   };
 
   // Valider un enseignant avec tous les documents
@@ -653,36 +862,36 @@ const mettreAJourEnseignant = (id, nouvellesInfos) => {
       const data = await response.json();
 
       if (data.success) {
-        setEnseignants(enseignants.map(ens => 
-          ens.id === id 
-            ? { 
-                ...ens, 
-                statut: 'validee',
-                documents: ens.documents.map(doc => ({
-                  ...doc,
-                  statut: 'valide',
-                  url: data.document_url || doc.url
-                }))
-              }
+        setEnseignants(enseignants.map(ens =>
+          ens.id === id
+            ? {
+              ...ens,
+              statut: 'validee',
+              documents: ens.documents.map(doc => ({
+                ...doc,
+                statut: 'valide',
+                url: data.document_url || doc.url
+              }))
+            }
             : ens
         ));
-        
+
         setShowValidationModalEnseignant(false);
         setSelectedDocuments({});
         setDocumentPreviews({});
-        
-       // alert('Enseignant validé avec succès !');
 
-       Swal.fire({
-        title: 'Enseignant validé avec succès !',
-        text: 'L\'enseignant a été validé avec succès.',
-        icon: 'success',
-        confirmButtonText: 'OK'
-      }).then((result) => {
-        if (result.isConfirmed) {
-          location.reload();
-        }
-      });
+        // alert('Enseignant validé avec succès !');
+
+        Swal.fire({
+          title: 'Enseignant validé avec succès !',
+          text: 'L\'enseignant a été validé avec succès.',
+          icon: 'success',
+          confirmButtonText: 'OK'
+        }).then((result) => {
+          if (result.isConfirmed) {
+            location.reload();
+          }
+        });
 
       } else {
         Swal.fire({
@@ -700,17 +909,17 @@ const mettreAJourEnseignant = (id, nouvellesInfos) => {
     }
   };
 
-    // Filtrer les inscriptions
-    const inscriptionsFiltrees = inscriptions.filter(ins => {
-      const matchSearch = ins.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         ins.prenom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         ins.email.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchFilter = filterStatus === 'all' || ins.statut === filterStatus;
-      const matchAnnee = filterAnnee === 'all' || ins.anneeAcademique === filterAnnee;
-      const matchFiliere = filterFiliere === 'all' || ins.filiere === filterFiliere;
-      
-      return matchSearch && matchFilter && matchAnnee && matchFiliere;
-    });
+  // Filtrer les inscriptions
+  const inscriptionsFiltrees = inscriptions.filter(ins => {
+    const matchSearch = ins.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      ins.prenom.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      ins.email.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchFilter = filterStatus === 'all' || ins.statut === filterStatus;
+    const matchAnnee = filterAnnee === 'all' || ins.anneeAcademique === filterAnnee;
+    const matchFiliere = filterFiliere === 'all' || ins.filiere === filterFiliere;
+
+    return matchSearch && matchFilter && matchAnnee && matchFiliere;
+  });
 
   // Rejeter un enseignant avec raison
   const rejeterEnseignant = async () => {
@@ -746,13 +955,13 @@ const mettreAJourEnseignant = (id, nouvellesInfos) => {
       const data = await response.json();
       const data2 = await response2.json();
 
-      if(data2){
-        
+      if (data2) {
+
       }
 
       if (data.success) {
-        setEnseignants(enseignants.map(ens => 
-          ens.id === enseignantToReject 
+        setEnseignants(enseignants.map(ens =>
+          ens.id === enseignantToReject
             ? { ...ens, statut: 'rejetee', raisonRefus: refusalReasonEnseignant }
             : ens
         ));
@@ -773,10 +982,11 @@ const mettreAJourEnseignant = (id, nouvellesInfos) => {
   };
 
   // Composant pour visualiser et uploader les documents des enseignants
-  const DocumentViewerEnseignant = ({ document, enseignantId, canUpload = false }) => {
+  const DocumentViewerEnseignant = ({ document, enseignantId, canUpload = false, onUpdate = null }) => {
     const documentKey = `enseignant_${enseignantId}_${document.type}`;
     const selectedFile = selectedDocuments[documentKey];
     const documentPreview = documentPreviews[documentKey];
+    const isUploading = uploadingDocuments[documentKey];
 
     const getDocumentIcon = (type) => {
       const icons = {
@@ -798,6 +1008,15 @@ const mettreAJourEnseignant = (id, nouvellesInfos) => {
       return labels[type] || document.nom;
     };
 
+    const handlePreview = () => {
+      const url = document.url.startsWith('http') ? document.url : API_URL_BASE + (document.url.startsWith('../') ? document.url.substring(3) : document.url);
+      setPreviewFile({
+        url: url,
+        type: document.url.toLowerCase().endsWith('.pdf') ? 'pdf' : 'image',
+        title: getDocumentLabel(document.type)
+      });
+    };
+
     return (
       <div className="flex flex-col bg-gray-50 rounded-lg p-4 border border-gray-200">
         <div className="flex items-center justify-between mb-3">
@@ -808,7 +1027,7 @@ const mettreAJourEnseignant = (id, nouvellesInfos) => {
               <div className="text-xs text-gray-500 uppercase">{document.type}</div>
             </div>
           </div>
-          
+
           {document.statut === 'valide' ? (
             <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold">
               ✓ Validé
@@ -822,16 +1041,16 @@ const mettreAJourEnseignant = (id, nouvellesInfos) => {
 
         <div className="flex gap-3">
           {document.url && document.url !== '#' && (
-            <button 
+            <button
               className="flex-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm flex items-center justify-center gap-2"
-              onClick={() => window.open(`${API_URL_BASE+document.url}`, '_blank')}
+              onClick={handlePreview}
             >
               <Eye className="w-4 h-4" />
               Voir le document
             </button>
           )}
-          
-          {canUpload && document.statut !== 'valide' && (
+
+          {canUpload && (
             <div className="flex-1">
               <input
                 type="file"
@@ -840,41 +1059,52 @@ const mettreAJourEnseignant = (id, nouvellesInfos) => {
                 accept=".jpg,.jpeg,.png,.pdf"
                 className="hidden"
               />
-              <label 
+              <label
                 htmlFor={`document-enseignant-${enseignantId}-${document.type}`}
                 className="block w-full px-3 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition text-sm text-center cursor-pointer"
               >
-                {selectedFile ? 'Fichier sélectionné' : 'Choisir un fichier'}
+                {selectedFile ? 'Changer la sélection' : 'Choisir un fichier'}
               </label>
             </div>
           )}
         </div>
 
         {selectedFile && (
-          <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-blue-700 text-sm font-medium">
-                  📎 {selectedFile.name}
-                </p>
-                <p className="text-blue-600 text-xs">
-                  Taille: {(selectedFile.size / 1024 / 1024).toFixed(2)} Mo
-                </p>
+          <div className="mt-3 space-y-3">
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-blue-700 text-sm font-medium">
+                    📎 {selectedFile.name}
+                  </p>
+                  <p className="text-blue-600 text-xs">
+                    Taille: {(selectedFile.size / 1024 / 1024).toFixed(2)} Mo
+                  </p>
+                </div>
+
+                {documentPreview && (
+                  <img
+                    src={documentPreview}
+                    alt="Aperçu"
+                    className="w-10 h-10 object-cover rounded border border-blue-300"
+                  />
+                )}
               </div>
-              <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">
-                Prêt pour validation
-              </span>
             </div>
-            
-            {documentPreview && (
-              <div className="mt-2 pt-2 border-t border-blue-200">
-                <label className="block text-xs text-blue-700 mb-1">Aperçu:</label>
-                <img 
-                  src={documentPreview} 
-                  alt="Preview document" 
-                  className="max-w-full max-h-32 object-contain rounded border border-blue-300"
-                />
-              </div>
+
+            {onUpdate && (
+              <button
+                onClick={onUpdate}
+                disabled={isUploading}
+                className="w-full py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {isUploading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Upload className="w-4 h-4" />
+                )}
+                {isUploading ? 'Chargement...' : 'Mettre à jour ce document'}
+              </button>
             )}
           </div>
         )}
@@ -882,12 +1112,13 @@ const mettreAJourEnseignant = (id, nouvellesInfos) => {
     );
   };
 
+
   // Modal pour la validation avec reçu et documents
   const ModalValidation = () => {
     if (!showValidationModal) return null;
 
     const currentStudent = inscriptions.find(ins => ins.id === inscriptionToValidate);
-    const hasSelectedDocuments = Object.keys(selectedDocuments).some(key => 
+    const hasSelectedDocuments = Object.keys(selectedDocuments).some(key =>
       key.startsWith(`${inscriptionToValidate}_`)
     );
 
@@ -909,7 +1140,7 @@ const mettreAJourEnseignant = (id, nouvellesInfos) => {
               <label className="block text-sm font-medium text-gray-700 mb-3">
                 Reçu d'inscription <span className="text-red-500">*</span>
               </label>
-              
+
               <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-green-400 transition-colors">
                 <input
                   type="file"
@@ -919,7 +1150,7 @@ const mettreAJourEnseignant = (id, nouvellesInfos) => {
                   accept=".jpg,.jpeg,.png,.pdf"
                   className="hidden"
                 />
-                <label 
+                <label
                   htmlFor="recu"
                   className="cursor-pointer flex flex-col items-center justify-center gap-3"
                 >
@@ -955,9 +1186,9 @@ const mettreAJourEnseignant = (id, nouvellesInfos) => {
                     Aperçu du reçu
                   </label>
                   <div className="border-2 border-gray-200 rounded-xl p-4 bg-white">
-                    <img 
-                      src={recuPreview} 
-                      alt="Preview reçu" 
+                    <img
+                      src={recuPreview}
+                      alt="Preview reçu"
                       className="mx-auto max-w-full max-h-48 object-contain rounded-lg"
                     />
                   </div>
@@ -973,16 +1204,16 @@ const mettreAJourEnseignant = (id, nouvellesInfos) => {
               </h4>
               <div className="space-y-4">
                 {currentStudent?.documents.map((doc, index) => (
-                  <DocumentViewer 
-                    key={index} 
-                    document={doc} 
+                  <DocumentViewer
+                    key={index}
+                    document={doc}
                     etudiantId={inscriptionToValidate}
                     canUpload={true}
                   />
                 ))}
               </div>
             </div>
-            
+
             <div className="flex gap-3 pt-4 border-t border-gray-200">
               <button
                 onClick={() => setShowValidationModal(false)}
@@ -1036,16 +1267,16 @@ const mettreAJourEnseignant = (id, nouvellesInfos) => {
               </h4>
               <div className="space-y-4">
                 {currentEnseignant?.documents.map((doc, index) => (
-                  <DocumentViewerEnseignant 
-                    key={index} 
-                    document={doc} 
+                  <DocumentViewerEnseignant
+                    key={index}
+                    document={doc}
                     enseignantId={enseignantToValidate}
                     canUpload={true}
                   />
                 ))}
               </div>
             </div>
-            
+
             <div className="flex gap-3 pt-4 border-t border-gray-200">
               <button
                 onClick={() => setShowValidationModalEnseignant(false)}
@@ -1094,7 +1325,7 @@ const mettreAJourEnseignant = (id, nouvellesInfos) => {
               placeholder="Saisissez la raison du refus de l'inscription..."
               required
             />
-            
+
             <div className="flex gap-3 mt-6">
               <button
                 onClick={() => setShowRefusalModal(false)}
@@ -1146,7 +1377,7 @@ const mettreAJourEnseignant = (id, nouvellesInfos) => {
               placeholder="Saisissez la raison du refus de la candidature..."
               required
             />
-            
+
             <div className="flex gap-3 mt-6">
               <button
                 onClick={() => setShowRefusalModalEnseignant(false)}
@@ -1289,37 +1520,56 @@ const mettreAJourEnseignant = (id, nouvellesInfos) => {
               </h4>
               <div className="space-y-4">
                 {selectedInscription.documents.map((doc, index) => (
-                  <DocumentViewer 
-                    key={index} 
-                    document={doc} 
+                  <DocumentViewer
+                    key={index}
+                    document={doc}
                     etudiantId={selectedInscription.id}
-                    canUpload={false}
+                    canUpload={true}
+                    onUpdate={() => handleUpdateServerDocument(selectedInscription.id, doc.type)}
                   />
                 ))}
               </div>
             </div>
 
             {/* Section reçu d'inscription */}
-            {selectedInscription.recuInscription && (
+            {selectedInscription.recuInscription ? (
               <div>
                 <h4 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
                   <FileText className="w-5 h-5 text-green-600" />
                   Reçu d'inscription
                 </h4>
-                <div className="bg-green-50 rounded-lg p-4 border border-green-200">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-sm text-green-700 font-medium">Reçu validé</div>
-                      <div className="text-xs text-green-600">Document disponible</div>
-                    </div>
-                    <button 
-                      className="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition text-sm flex items-center gap-2"
-                      onClick={() => window.open(`${URL_BASE.UPLOADS_RECU()}/${selectedInscription.recuInscription}`, '_blank')}
-                    >
-                      <Eye className="w-4 h-4" />
-                      Voir le reçu
-                    </button>
-                  </div>
+                <div className="space-y-4">
+                  <DocumentViewer
+                    document={{
+                      nom: "Reçu d'inscription",
+                      type: 'recu_inscription',
+                      url: `../uploads/recu_inscription/${selectedInscription.recuInscription}`,
+                      statut: 'valide'
+                    }}
+                    etudiantId={selectedInscription.id}
+                    canUpload={true}
+                    onUpdate={() => handleUpdateServerDocument(selectedInscription.id, 'recu_inscription')}
+                  />
+                </div>
+              </div>
+            ) : (
+              <div>
+                <h4 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-gray-400" />
+                  Reçu d'inscription (Non fourni)
+                </h4>
+                <div className="space-y-4">
+                  <DocumentViewer
+                    document={{
+                      nom: "Reçu d'inscription",
+                      type: 'recu_inscription',
+                      url: '#',
+                      statut: 'en_attente'
+                    }}
+                    etudiantId={selectedInscription.id}
+                    canUpload={true}
+                    onUpdate={() => handleUpdateServerDocument(selectedInscription.id, 'recu_inscription')}
+                  />
                 </div>
               </div>
             )}
@@ -1350,575 +1600,575 @@ const mettreAJourEnseignant = (id, nouvellesInfos) => {
   };
 
   // Modal pour modifier les informations de l'enseignant
-const ModalModificationEnseignant = () => {
-  if (!editingEnseignant) return null;
+  const ModalModificationEnseignant = () => {
+    if (!editingEnseignant) return null;
 
-  const [formData, setFormData] = useState({
-    nom: editingEnseignant.nom,
-    prenom: editingEnseignant.prenom,
-    email: editingEnseignant.email,
-    telephone: editingEnseignant.telephone,
-    dateNaissance: editingEnseignant.dateNaissance,
-    lieuNaissance: editingEnseignant.lieuNaissance,
-    adresse: editingEnseignant.adresse,
-    diplome: editingEnseignant.diplome,
-    specialite: editingEnseignant.specialite,
-    anneeExperience: editingEnseignant.anneeExperience,
-    filiereEnseignee: editingEnseignant.filiereEnseignee,
-    coursEnseignes: editingEnseignant.coursEnseignes
-  });
+    const [formData, setFormData] = useState({
+      nom: editingEnseignant.nom,
+      prenom: editingEnseignant.prenom,
+      email: editingEnseignant.email,
+      telephone: editingEnseignant.telephone,
+      dateNaissance: editingEnseignant.dateNaissance,
+      lieuNaissance: editingEnseignant.lieuNaissance,
+      adresse: editingEnseignant.adresse,
+      diplome: editingEnseignant.diplome,
+      specialite: editingEnseignant.specialite,
+      anneeExperience: editingEnseignant.anneeExperience,
+      filiereEnseignee: editingEnseignant.filiereEnseignee,
+      coursEnseignes: editingEnseignant.coursEnseignes
+    });
 
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
+    const handleSubmit = async (e) => {
+      e.preventDefault();
+      setLoading(true);
+      setError(null);
 
-    try {
-      const response = await fetch(URL_BASE.MODIFIER_ENSEIGNANT(), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          enseignant_id: editingEnseignant.id,
-          ...formData
-        })
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        // Mettre à jour l'état local
-        mettreAJourEnseignant(editingEnseignant.id, formData);
-        Swal.fire({
-          title: 'Enseignant modifié avec succès !',
-          text: 'Les informations de l\'enseignant ont été mises à jour avec succès.',
-          icon: 'success',
-          confirmButtonText: 'OK'
+      try {
+        const response = await fetch(URL_BASE.MODIFIER_ENSEIGNANT(), {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            enseignant_id: editingEnseignant.id,
+            ...formData
+          })
         });
-      } else {
+
+        const data = await response.json();
+
+        if (data.success) {
+          // Mettre à jour l'état local
+          mettreAJourEnseignant(editingEnseignant.id, formData);
+          Swal.fire({
+            title: 'Enseignant modifié avec succès !',
+            text: 'Les informations de l\'enseignant ont été mises à jour avec succès.',
+            icon: 'success',
+            confirmButtonText: 'OK'
+          });
+        } else {
+          Swal.fire({
+            title: 'Erreur',
+            text: 'Erreur: ' + data.message,
+            icon: 'error',
+            confirmButtonText: 'OK'
+          });
+          setError(data.message || 'Erreur lors de la mise à jour');
+        }
+      } catch (error) {
+        console.error('Erreur lors de la modification:', error);
         Swal.fire({
           title: 'Erreur',
-          text: 'Erreur: ' + data.message,
+          text: 'Erreur: ' + error,
           icon: 'error',
           confirmButtonText: 'OK'
         });
-        setError(data.message || 'Erreur lors de la mise à jour');
+        setError('Erreur de connexion au serveur' + error);
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error('Erreur lors de la modification:', error);
-      Swal.fire({
-        title: 'Erreur',
-        text: 'Erreur: ' + error,
-        icon: 'error',
-        confirmButtonText: 'OK'
-      });
-      setError('Erreur de connexion au serveur'+error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
+    const handleChange = (e) => {
+      const { name, value } = e.target;
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    };
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
-        <div className="bg-gradient-to-r from-purple-600 to-purple-700 text-white p-6 rounded-t-2xl">
-          <h3 className="text-xl font-bold">Modifier les informations de l'enseignant</h3>
-          <p className="text-purple-100 text-sm mt-1">
-            {editingEnseignant.nom} {editingEnseignant.prenom}
-          </p>
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+          <div className="bg-gradient-to-r from-purple-600 to-purple-700 text-white p-6 rounded-t-2xl">
+            <h3 className="text-xl font-bold">Modifier les informations de l'enseignant</h3>
+            <p className="text-purple-100 text-sm mt-1">
+              {editingEnseignant.nom} {editingEnseignant.prenom}
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="p-6 space-y-4">
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <div className="flex items-center gap-2">
+                  <XCircle className="w-5 h-5 text-red-600" />
+                  <span className="text-red-700 text-sm">{error}</span>
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Informations personnelles */}
+              <div className="space-y-4">
+                <h4 className="font-semibold text-gray-900 border-b pb-2">Informations personnelles</h4>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Nom *
+                  </label>
+                  <input
+                    type="text"
+                    name="nom"
+                    value={formData.nom}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Prénom *
+                  </label>
+                  <input
+                    type="text"
+                    name="prenom"
+                    value={formData.prenom}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Date de naissance
+                  </label>
+                  <input
+                    type="date"
+                    name="dateNaissance"
+                    value={formData.dateNaissance}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Lieu de naissance
+                  </label>
+                  <input
+                    type="text"
+                    name="lieuNaissance"
+                    value={formData.lieuNaissance}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Adresse
+                  </label>
+                  <textarea
+                    name="adresse"
+                    value={formData.adresse}
+                    onChange={handleChange}
+                    rows="2"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none resize-none"
+                  />
+                </div>
+              </div>
+
+              {/* Informations professionnelles et contact */}
+              <div className="space-y-4">
+                <h4 className="font-semibold text-gray-900 border-b pb-2">Informations professionnelles</h4>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Diplôme *
+                  </label>
+                  <input
+                    type="text"
+                    name="diplome"
+                    value={formData.diplome}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Spécialité *
+                  </label>
+                  <input
+                    type="text"
+                    name="specialite"
+                    value={formData.specialite}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Années d'expérience
+                  </label>
+                  <input
+                    type="number"
+                    name="anneeExperience"
+                    value={formData.anneeExperience}
+                    onChange={handleChange}
+                    min="0"
+                    max="50"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Filière enseignée *
+                  </label>
+                  <select
+                    name="filiereEnseignee"
+                    value={formData.filiereEnseignee}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
+                    required
+                  >
+                    <option value="">Sélectionnez une filière</option>
+                    {filieres.map(filiere => (
+                      <option key={filiere} value={filiere}>{filiere}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Cours enseignés
+                  </label>
+                  <textarea
+                    name="coursEnseignes"
+                    value={formData.coursEnseignes}
+                    onChange={handleChange}
+                    rows="2"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none resize-none"
+                    placeholder="Séparer les cours par des virgules"
+                  />
+                </div>
+
+                <h4 className="font-semibold text-gray-900 border-b pb-2 pt-4">Coordonnées</h4>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Email *
+                  </label>
+                  <input
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Téléphone *
+                  </label>
+                  <input
+                    type="tel"
+                    name="telephone"
+                    value={formData.telephone}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-6 border-t border-gray-200">
+              <button
+                type="button"
+                onClick={() => setEditingEnseignant(null)}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
+                disabled={loading}
+              >
+                Annuler
+              </button>
+              <button
+                type="submit"
+                disabled={loading}
+                className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Mise à jour...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="w-4 h-4" />
+                    Enregistrer
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
         </div>
-
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-              <div className="flex items-center gap-2">
-                <XCircle className="w-5 h-5 text-red-600" />
-                <span className="text-red-700 text-sm">{error}</span>
-              </div>
-            </div>
-          )}
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Informations personnelles */}
-            <div className="space-y-4">
-              <h4 className="font-semibold text-gray-900 border-b pb-2">Informations personnelles</h4>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Nom *
-                </label>
-                <input
-                  type="text"
-                  name="nom"
-                  value={formData.nom}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Prénom *
-                </label>
-                <input
-                  type="text"
-                  name="prenom"
-                  value={formData.prenom}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Date de naissance
-                </label>
-                <input
-                  type="date"
-                  name="dateNaissance"
-                  value={formData.dateNaissance}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Lieu de naissance
-                </label>
-                <input
-                  type="text"
-                  name="lieuNaissance"
-                  value={formData.lieuNaissance}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Adresse
-                </label>
-                <textarea
-                  name="adresse"
-                  value={formData.adresse}
-                  onChange={handleChange}
-                  rows="2"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none resize-none"
-                />
-              </div>
-            </div>
-
-            {/* Informations professionnelles et contact */}
-            <div className="space-y-4">
-              <h4 className="font-semibold text-gray-900 border-b pb-2">Informations professionnelles</h4>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Diplôme *
-                </label>
-                <input
-                  type="text"
-                  name="diplome"
-                  value={formData.diplome}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Spécialité *
-                </label>
-                <input
-                  type="text"
-                  name="specialite"
-                  value={formData.specialite}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Années d'expérience
-                </label>
-                <input
-                  type="number"
-                  name="anneeExperience"
-                  value={formData.anneeExperience}
-                  onChange={handleChange}
-                  min="0"
-                  max="50"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Filière enseignée *
-                </label>
-                <select
-                  name="filiereEnseignee"
-                  value={formData.filiereEnseignee}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
-                  required
-                >
-                  <option value="">Sélectionnez une filière</option>
-                  {filieres.map(filiere => (
-                    <option key={filiere} value={filiere}>{filiere}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Cours enseignés
-                </label>
-                <textarea
-                  name="coursEnseignes"
-                  value={formData.coursEnseignes}
-                  onChange={handleChange}
-                  rows="2"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none resize-none"
-                  placeholder="Séparer les cours par des virgules"
-                />
-              </div>
-
-              <h4 className="font-semibold text-gray-900 border-b pb-2 pt-4">Coordonnées</h4>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Email *
-                </label>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Téléphone *
-                </label>
-                <input
-                  type="tel"
-                  name="telephone"
-                  value={formData.telephone}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
-                  required
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="flex gap-3 pt-6 border-t border-gray-200">
-            <button
-              type="button"
-              onClick={() => setEditingEnseignant(null)}
-              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
-              disabled={loading}
-            >
-              Annuler
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition flex items-center justify-center gap-2 disabled:opacity-50"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Mise à jour...
-                </>
-              ) : (
-                <>
-                  <CheckCircle className="w-4 h-4" />
-                  Enregistrer
-                </>
-              )}
-            </button>
-          </div>
-        </form>
       </div>
-    </div>
-  );
-};
+    );
+  };
   // Composant pour modifier les informations de l'étudiant
-const ModalModificationEtudiant = () => {
-  if (!editingStudent) return null;
+  const ModalModificationEtudiant = () => {
+    if (!editingStudent) return null;
 
-  const [formData, setFormData] = useState({
-    nom: editingStudent.nom,
-    prenom: editingStudent.prenom,
-    email: editingStudent.email,
-    telephone: editingStudent.telephone,
-    dateNaissance: editingStudent.dateNaissance,
-    lieuNaissance: editingStudent.lieuNaissance,
-    adresse: editingStudent.adresse,
-    anneeAcademique: editingStudent.anneeAcademique,
-    filiere: editingStudent.filiere
-  });
+    const [formData, setFormData] = useState({
+      nom: editingStudent.nom,
+      prenom: editingStudent.prenom,
+      email: editingStudent.email,
+      telephone: editingStudent.telephone,
+      dateNaissance: editingStudent.dateNaissance,
+      lieuNaissance: editingStudent.lieuNaissance,
+      adresse: editingStudent.adresse,
+      anneeAcademique: editingStudent.anneeAcademique,
+      filiere: editingStudent.filiere
+    });
 
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
+    const handleSubmit = async (e) => {
+      e.preventDefault();
+      setLoading(true);
+      setError(null);
 
-    try {
-      const response = await fetch(URL_BASE.MODIFIER_ETUDIANT(), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          etudiant_id: editingStudent.id,
-          ...formData
-        })
-      });
+      try {
+        const response = await fetch(URL_BASE.MODIFIER_ETUDIANT(), {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            etudiant_id: editingStudent.id,
+            ...formData
+          })
+        });
 
-      const data = await response.json();
+        const data = await response.json();
 
-      if (data.success) {
-        // Mettre à jour l'état local
-        mettreAJourEtudiant(editingStudent.id, formData);
-        alert('Informations mises à jour avec succès !');
-      } else {
-        setError(data.message || 'Erreur lors de la mise à jour');
+        if (data.success) {
+          // Mettre à jour l'état local
+          mettreAJourEtudiant(editingStudent.id, formData);
+          alert('Informations mises à jour avec succès !');
+        } else {
+          setError(data.message || 'Erreur lors de la mise à jour');
+        }
+      } catch (error) {
+        console.error('Erreur lors de la modification:', error);
+        setError('Erreur de connexion au serveur' + error);
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error('Erreur lors de la modification:', error);
-      setError('Erreur de connexion au serveur'+error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
+    const handleChange = (e) => {
+      const { name, value } = e.target;
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    };
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
-        <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6 rounded-t-2xl">
-          <h3 className="text-xl font-bold">Modifier les informations de l'étudiant</h3>
-          <p className="text-blue-100 text-sm mt-1">
-            {editingStudent.nom} {editingStudent.prenom}
-            {editingStudent.matricule && ` - ${editingStudent.matricule}`}
-          </p>
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+          <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6 rounded-t-2xl">
+            <h3 className="text-xl font-bold">Modifier les informations de l'étudiant</h3>
+            <p className="text-blue-100 text-sm mt-1">
+              {editingStudent.nom} {editingStudent.prenom}
+              {editingStudent.matricule && ` - ${editingStudent.matricule}`}
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="p-6 space-y-4">
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <div className="flex items-center gap-2">
+                  <XCircle className="w-5 h-5 text-red-600" />
+                  <span className="text-red-700 text-sm">{error}</span>
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Informations personnelles */}
+              <div className="space-y-4">
+                <h4 className="font-semibold text-gray-900 border-b pb-2">Informations personnelles</h4>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Nom *
+                  </label>
+                  <input
+                    type="text"
+                    name="nom"
+                    value={formData.nom}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Prénom *
+                  </label>
+                  <input
+                    type="text"
+                    name="prenom"
+                    value={formData.prenom}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Date de naissance
+                  </label>
+                  <input
+                    type="date"
+                    name="dateNaissance"
+                    value={formData.dateNaissance}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Lieu de naissance
+                  </label>
+                  <input
+                    type="text"
+                    name="lieuNaissance"
+                    value={formData.lieuNaissance}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Informations de contact et académiques */}
+              <div className="space-y-4">
+                <h4 className="font-semibold text-gray-900 border-b pb-2">Contact & Académique</h4>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Email *
+                  </label>
+                  <input
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Téléphone *
+                  </label>
+                  <input
+                    type="tel"
+                    name="telephone"
+                    value={formData.telephone}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Adresse
+                  </label>
+                  <textarea
+                    name="adresse"
+                    value={formData.adresse}
+                    onChange={handleChange}
+                    rows="2"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Année académique
+                  </label>
+                  <select
+                    name="anneeAcademique"
+                    value={formData.anneeAcademique}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  >
+                    {anneesAcademiques.map(annee => (
+                      <option key={annee} value={annee}>{annee}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Filière
+                  </label>
+                  <select
+                    name="filiere"
+                    value={formData.filiere}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  >
+                    {filieres.map(filiere => (
+                      <option key={filiere} value={filiere}>{filiere}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-6 border-t border-gray-200">
+              <button
+                type="button"
+                onClick={() => setEditingStudent(null)}
+                className="flex-1 px-4 py-2 border border-gray-300 text-white rounded-lg bg-red-500 transition"
+                disabled={loading}
+              >
+                Annuler
+              </button>
+              <button
+                type="submit"
+                disabled={loading}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Mise à jour...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="w-4 h-4" />
+                    Enregistrer
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
         </div>
-
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-              <div className="flex items-center gap-2">
-                <XCircle className="w-5 h-5 text-red-600" />
-                <span className="text-red-700 text-sm">{error}</span>
-              </div>
-            </div>
-          )}
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Informations personnelles */}
-            <div className="space-y-4">
-              <h4 className="font-semibold text-gray-900 border-b pb-2">Informations personnelles</h4>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Nom *
-                </label>
-                <input
-                  type="text"
-                  name="nom"
-                  value={formData.nom}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Prénom *
-                </label>
-                <input
-                  type="text"
-                  name="prenom"
-                  value={formData.prenom}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Date de naissance
-                </label>
-                <input
-                  type="date"
-                  name="dateNaissance"
-                  value={formData.dateNaissance}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Lieu de naissance
-                </label>
-                <input
-                  type="text"
-                  name="lieuNaissance"
-                  value={formData.lieuNaissance}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                />
-              </div>
-            </div>
-
-            {/* Informations de contact et académiques */}
-            <div className="space-y-4">
-              <h4 className="font-semibold text-gray-900 border-b pb-2">Contact & Académique</h4>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Email *
-                </label>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Téléphone *
-                </label>
-                <input
-                  type="tel"
-                  name="telephone"
-                  value={formData.telephone}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Adresse
-                </label>
-                <textarea
-                  name="adresse"
-                  value={formData.adresse}
-                  onChange={handleChange}
-                  rows="2"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Année académique
-                </label>
-                <select
-                  name="anneeAcademique"
-                  value={formData.anneeAcademique}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                >
-                  {anneesAcademiques.map(annee => (
-                    <option key={annee} value={annee}>{annee}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Filière
-                </label>
-                <select
-                  name="filiere"
-                  value={formData.filiere}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                >
-                  {filieres.map(filiere => (
-                    <option key={filiere} value={filiere}>{filiere}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex gap-3 pt-6 border-t border-gray-200">
-            <button
-              type="button"
-              onClick={() => setEditingStudent(null)}
-              className="flex-1 px-4 py-2 border border-gray-300 text-white rounded-lg bg-red-500 transition"
-              disabled={loading}
-            >
-              Annuler
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center justify-center gap-2 disabled:opacity-50"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Mise à jour...
-                </>
-              ) : (
-                <>
-                  <CheckCircle className="w-4 h-4" />
-                  Enregistrer
-                </>
-              )}
-            </button>
-          </div>
-        </form>
       </div>
-    </div>
-  );
-};
+    );
+  };
 
 
   // Modal de détails pour enseignant
@@ -1945,7 +2195,7 @@ const ModalModificationEtudiant = () => {
             <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
               <div className="flex items-center justify-between">
                 <span className="text-gray-700 font-medium">Statut actuel</span>
-             
+
                 <StatutBadge statut={selectedEnseignant.statut} />
               </div>
               {selectedEnseignant.statut === 'rejetee' && selectedEnseignant.raisonRefus && (
@@ -2042,14 +2292,16 @@ const ModalModificationEtudiant = () => {
               </h4>
               <div className="space-y-4">
                 {selectedEnseignant.documents.map((doc, index) => (
-                  <DocumentViewerEnseignant 
-                    key={index} 
-                    document={doc} 
+                  <DocumentViewerEnseignant
+                    key={index}
+                    document={doc}
                     enseignantId={selectedEnseignant.id}
-                    canUpload={false}
+                    canUpload={true}
+                    onUpdate={() => handleUpdateServerDocumentEnseignant(selectedEnseignant.id, doc.type)}
                   />
                 ))}
               </div>
+
             </div>
 
             {/* Actions */}
@@ -2123,17 +2375,17 @@ const ModalModificationEtudiant = () => {
   };
 
   // Composant pour visualiser et uploader les documents
-  const DocumentViewer = ({ document, etudiantId, canUpload = false }) => {
+  const DocumentViewer = ({ document, etudiantId, canUpload = false, onUpdate = null }) => {
     const documentKey = `${etudiantId}_${document.type}`;
-   // console.log(document);
-    
+
     const selectedFile = selectedDocuments[documentKey];
     const documentPreview = documentPreviews[documentKey];
+    const isUploading = uploadingDocuments[documentKey];
 
     const getDocumentIcon = (type) => {
       const icons = {
         'acte_naissance': '📋',
-        'cip': '🆔', 
+        'cip': '🆔',
         'diplome_bac': '🎓',
         'photo': '🖼️',
         'pdf': '📄',
@@ -2147,9 +2399,20 @@ const ModalModificationEtudiant = () => {
         'acte_naissance': 'Acte de naissance',
         'cip': 'Carte CIP',
         'diplome_bac': 'Diplôme de Bac ou Attestation',
-        'photo': 'Photo d\'identité'
+        'photo': 'Photo d\'identité',
+        'recu_inscription': 'Reçu d\'inscription'
       };
       return labels[type] || document.nom;
+    };
+
+    const handlePreview = () => {
+      // Pour les étudiants, l'URL peut être relative ou absolue. On s'assure d'avoir la bonne URL.
+      const url = document.url.startsWith('http') ? document.url : API_URL_BASE + "/" + (document.url.startsWith('../') ? document.url.substring(3) : document.url);
+      setPreviewFile({
+        url: url,
+        type: document.url.toLowerCase().endsWith('.pdf') ? 'pdf' : 'image',
+        title: getDocumentLabel(document.type)
+      });
     };
 
     return (
@@ -2162,7 +2425,7 @@ const ModalModificationEtudiant = () => {
               <div className="text-xs text-gray-500 uppercase">{document.type}</div>
             </div>
           </div>
-          
+
           {document.statut === 'valide' ? (
             <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold">
               ✓ Validé
@@ -2176,16 +2439,16 @@ const ModalModificationEtudiant = () => {
 
         <div className="flex gap-3">
           {document.url && document.url !== '#' && (
-            <button 
+            <button
               className="flex-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm flex items-center justify-center gap-2"
-              onClick={() => window.open(`${API_URL_BASE+document.url}`, '_blank')}
+              onClick={handlePreview}
             >
               <Eye className="w-4 h-4" />
               Voir le document
             </button>
           )}
-          
-          {canUpload && document.statut !== 'valide' && (
+
+          {canUpload && (
             <div className="flex-1">
               <input
                 type="file"
@@ -2194,41 +2457,51 @@ const ModalModificationEtudiant = () => {
                 accept=".jpg,.jpeg,.png,.pdf"
                 className="hidden"
               />
-              <label 
+              <label
                 htmlFor={`document-${etudiantId}-${document.type}`}
                 className="block w-full px-3 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition text-sm text-center cursor-pointer"
               >
-                {selectedFile ? 'Fichier sélectionné' : 'Choisir un fichier'}
+                {selectedFile ? 'Changer la sélection' : 'Choisir un fichier'}
               </label>
             </div>
           )}
         </div>
 
         {selectedFile && (
-          <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-blue-700 text-sm font-medium">
-                  📎 {selectedFile.name}
-                </p>
-                <p className="text-blue-600 text-xs">
-                  Taille: {(selectedFile.size / 1024 / 1024).toFixed(2)} Mo
-                </p>
+          <div className="mt-3 space-y-3">
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-blue-700 text-sm font-medium">
+                    📎 {selectedFile.name}
+                  </p>
+                  <p className="text-blue-600 text-xs">
+                    Taille: {(selectedFile.size / 1024 / 1024).toFixed(2)} Mo
+                  </p>
+                </div>
+                {documentPreview && (
+                  <img
+                    src={documentPreview}
+                    alt="Aperçu"
+                    className="w-10 h-10 object-cover rounded border border-blue-300"
+                  />
+                )}
               </div>
-              <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">
-                Prêt pour validation
-              </span>
             </div>
-            
-            {documentPreview && (
-              <div className="mt-2 pt-2 border-t border-blue-200">
-                <label className="block text-xs text-blue-700 mb-1">Aperçu:</label>
-                <img 
-                  src={documentPreview} 
-                  alt="Preview document" 
-                  className="max-w-full max-h-32 object-contain rounded border border-blue-300"
-                />
-              </div>
+
+            {onUpdate && (
+              <button
+                onClick={onUpdate}
+                disabled={isUploading}
+                className="w-full py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {isUploading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Upload className="w-4 h-4" />
+                )}
+                {isUploading ? 'Chargement...' : 'Mettre à jour ce document'}
+              </button>
             )}
           </div>
         )}
@@ -2236,226 +2509,227 @@ const ModalModificationEtudiant = () => {
     );
   };
 
-    // Section Gestion des Inscriptions
-    const SectionInscriptions = () => (
-      <div className="space-y-6">
-        {/* Barre de recherche et filtres */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <div className="flex flex-col lg:flex-row gap-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <input
-                type="text"
-                placeholder="Rechercher par nom, prénom ou email..."
-                value={searchTerm}
-                onChange={handleSearchChange}
-                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all duration-200"
-              />
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <select
-                value={filterStatus}
-                onChange={handleFilterStatusChange}
-                className="px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white transition-all duration-200"
+
+  // Section Gestion des Inscriptions
+  const SectionInscriptions = () => (
+    <div className="space-y-6">
+      {/* Barre de recherche et filtres */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="flex flex-col lg:flex-row gap-4">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <input
+              type="text"
+              placeholder="Rechercher par nom, prénom ou email..."
+              value={searchTerm}
+              onChange={handleSearchChange}
+              className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all duration-200"
+            />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <select
+              value={filterStatus}
+              onChange={handleFilterStatusChange}
+              className="px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white transition-all duration-200"
+            >
+              <option value="all">Tous les statuts</option>
+              <option value="en_attente">En attente</option>
+              <option value="validee">Validées</option>
+              <option value="rejetee">Rejetées</option>
+            </select>
+            <select
+              value={filterAnnee}
+              onChange={handleFilterAnneeChange}
+              className="px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white transition-all duration-200"
+            >
+              <option value="all">Toutes les années</option>
+              {anneesAcademiques.map(annee => (
+                <option key={annee} value={annee}>{annee}</option>
+              ))}
+            </select>
+            <select
+              value={filterFiliere}
+              onChange={handleFilterFiliereChange}
+              className="px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white transition-all duration-200"
+            >
+              <option value="all">Toutes les filières</option>
+              {filieres.map(filiere => (
+                <option key={filiere} value={filiere}>{filiere}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* État de chargement et erreur */}
+      {loading && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+          <Loader2 className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
+          <h3 className="text-xl font-bold text-gray-900 mb-2">Chargement des étudiants</h3>
+          <p className="text-gray-600">Récupération des données en cours...</p>
+        </div>
+      )}
+
+      {error && !loading && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-6">
+          <div className="flex items-center gap-3">
+            <XCircle className="w-6 h-6 text-red-600" />
+            <div>
+              <h3 className="text-lg font-bold text-red-800">Erreur de chargement</h3>
+              <p className="text-red-700">{error}</p>
+              <button
+                onClick={fetchEtudiants}
+                className="mt-3 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
               >
-                <option value="all">Tous les statuts</option>
-                <option value="en_attente">En attente</option>
-                <option value="validee">Validées</option>
-                <option value="rejetee">Rejetées</option>
-              </select>
-              <select
-                value={filterAnnee}
-                onChange={handleFilterAnneeChange}
-                className="px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white transition-all duration-200"
-              >
-                <option value="all">Toutes les années</option>
-                {anneesAcademiques.map(annee => (
-                  <option key={annee} value={annee}>{annee}</option>
-                ))}
-              </select>
-              <select
-                value={filterFiliere}
-                onChange={handleFilterFiliereChange}
-                className="px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white transition-all duration-200"
-              >
-                <option value="all">Toutes les filières</option>
-                {filieres.map(filiere => (
-                  <option key={filiere} value={filiere}>{filiere}</option>
-                ))}
-              </select>
+                Réessayer
+              </button>
             </div>
           </div>
         </div>
-  
-        {/* État de chargement et erreur */}
-        {loading && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
-            <Loader2 className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
-            <h3 className="text-xl font-bold text-gray-900 mb-2">Chargement des étudiants</h3>
-            <p className="text-gray-600">Récupération des données en cours...</p>
-          </div>
-        )}
-  
-        {error && !loading && (
-          <div className="bg-red-50 border border-red-200 rounded-xl p-6">
-            <div className="flex items-center gap-3">
-              <XCircle className="w-6 h-6 text-red-600" />
-              <div>
-                <h3 className="text-lg font-bold text-red-800">Erreur de chargement</h3>
-                <p className="text-red-700">{error}</p>
-                <button
-                  onClick={fetchEtudiants}
-                  className="mt-3 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
-                >
-                  Réessayer
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-  
-        {/* Statistiques rapides */}
-        {!loading && !error && (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-xl p-6 border border-yellow-200">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-yellow-700 text-sm font-medium">En attente</p>
-                    <p className="text-3xl font-bold text-yellow-900 mt-1">
-                      {inscriptions.filter(i => i.statut === 'en_attente').length}
-                    </p>
-                  </div>
-                  <div className="bg-yellow-200 p-3 rounded-lg">
-                    <Filter className="w-6 h-6 text-yellow-700" />
-                  </div>
-                </div>
-              </div>
-              <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 border border-green-200">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-green-700 text-sm font-medium">Validées</p>
-                    <p className="text-3xl font-bold text-green-900 mt-1">
-                      {inscriptions.filter(i => i.statut === 'validee').length}
-                    </p>
-                  </div>
-                  <div className="bg-green-200 p-3 rounded-lg">
-                    <CheckCircle className="w-6 h-6 text-green-700" />
-                  </div>
-                </div>
-              </div>
-              <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-xl p-6 border border-red-200">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-red-700 text-sm font-medium">Rejetées</p>
-                    <p className="text-3xl font-bold text-red-900 mt-1">
-                      {inscriptions.filter(i => i.statut === 'rejetee').length}
-                    </p>
-                  </div>
-                  <div className="bg-red-200 p-3 rounded-lg">
-                    <XCircle className="w-6 h-6 text-red-700" />
-                  </div>
-                </div>
-              </div>
-              <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-blue-700 text-sm font-medium">Documents manquants</p>
-                    <p className="text-3xl font-bold text-blue-900 mt-1">
-                      {inscriptions.reduce((count, ins) => {
-                        const missingDocs = ins.documents.filter(doc => doc.statut !== 'valide').length;
-                        return count + missingDocs;
-                      }, 0)}
-                    </p>
-                  </div>
-                  <div className="bg-blue-200 p-3 rounded-lg">
-                    <FileText className="w-6 h-6 text-blue-700" />
-                  </div>
-                </div>
-              </div>
-            </div>
-  
-            {/* Liste des inscriptions */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-              {inscriptionsFiltrees.length === 0 ? (
-                <div className="p-12 text-center">
-                  <User className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-xl font-bold text-gray-900 mb-2">Aucun étudiant trouvé</h3>
-                  <p className="text-gray-600">
-                    {inscriptions.length === 0 
-                      ? "Aucun étudiant n'est inscrit pour le moment." 
-                      : "Aucun étudiant ne correspond aux critères de recherche."}
+      )}
+
+      {/* Statistiques rapides */}
+      {!loading && !error && (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-xl p-6 border border-yellow-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-yellow-700 text-sm font-medium">En attente</p>
+                  <p className="text-3xl font-bold text-yellow-900 mt-1">
+                    {inscriptions.filter(i => i.statut === 'en_attente').length}
                   </p>
                 </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-gray-50 border-b border-gray-200">
-                      <tr>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Étudiant</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Année/Filière</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Contact</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Date inscription</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Statut</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200">
-                      {inscriptionsFiltrees.map((ins) => (
-                        <tr key={ins.id} className="hover:bg-gray-50 transition">
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                                <User className="w-5 h-5 text-blue-600" />
-                              </div>
-                              <div>
-                                <div className="font-semibold text-gray-900">{ins.nom} {ins.prenom}</div>
-                                {ins.matricule && (
-                                  <div className="text-xs text-gray-500 font-mono">{ins.matricule}</div>
-                                )}
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="text-sm font-medium text-gray-900">{ins.anneeAcademique}</div>
-                            <div className="text-xs text-gray-500">{ins.filiere}</div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="text-sm text-gray-600">{ins.email}</div>
-                            <div className="text-xs text-gray-500">{ins.telephone}</div>
-                          </td>
-                          <td className="px-6 py-4 text-sm text-gray-600">{ins.dateInscription}</td>
-                          <td className="px-6 py-4">
-                            <StatutBadge statut={ins.statut} />
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="flex gap-2">
-                              <button
-                                onClick={() => setSelectedInscription(ins)}
-                                className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm font-medium"
-                              >
-                                Détails
-                              </button>
-                              <button
-                                onClick={() => setEditingStudent(ins)}
-                                className="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition text-sm font-medium"
-                              >
-                                Modifier
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="bg-yellow-200 p-3 rounded-lg">
+                  <Filter className="w-6 h-6 text-yellow-700" />
                 </div>
-              )}
+              </div>
             </div>
-          </>
-        )}
-      </div>
-    );
-  
+            <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 border border-green-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-green-700 text-sm font-medium">Validées</p>
+                  <p className="text-3xl font-bold text-green-900 mt-1">
+                    {inscriptions.filter(i => i.statut === 'validee').length}
+                  </p>
+                </div>
+                <div className="bg-green-200 p-3 rounded-lg">
+                  <CheckCircle className="w-6 h-6 text-green-700" />
+                </div>
+              </div>
+            </div>
+            <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-xl p-6 border border-red-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-red-700 text-sm font-medium">Rejetées</p>
+                  <p className="text-3xl font-bold text-red-900 mt-1">
+                    {inscriptions.filter(i => i.statut === 'rejetee').length}
+                  </p>
+                </div>
+                <div className="bg-red-200 p-3 rounded-lg">
+                  <XCircle className="w-6 h-6 text-red-700" />
+                </div>
+              </div>
+            </div>
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-blue-700 text-sm font-medium">Documents manquants</p>
+                  <p className="text-3xl font-bold text-blue-900 mt-1">
+                    {inscriptions.reduce((count, ins) => {
+                      const missingDocs = ins.documents.filter(doc => doc.statut !== 'valide').length;
+                      return count + missingDocs;
+                    }, 0)}
+                  </p>
+                </div>
+                <div className="bg-blue-200 p-3 rounded-lg">
+                  <FileText className="w-6 h-6 text-blue-700" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Liste des inscriptions */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            {inscriptionsFiltrees.length === 0 ? (
+              <div className="p-12 text-center">
+                <User className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-xl font-bold text-gray-900 mb-2">Aucun étudiant trouvé</h3>
+                <p className="text-gray-600">
+                  {inscriptions.length === 0
+                    ? "Aucun étudiant n'est inscrit pour le moment."
+                    : "Aucun étudiant ne correspond aux critères de recherche."}
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Étudiant</th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Année/Filière</th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Contact</th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Date inscription</th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Statut</th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {inscriptionsFiltrees.map((ins) => (
+                      <tr key={ins.id} className="hover:bg-gray-50 transition">
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                              <User className="w-5 h-5 text-blue-600" />
+                            </div>
+                            <div>
+                              <div className="font-semibold text-gray-900">{ins.nom} {ins.prenom}</div>
+                              {ins.matricule && (
+                                <div className="text-xs text-gray-500 font-mono">{ins.matricule}</div>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-sm font-medium text-gray-900">{ins.anneeAcademique}</div>
+                          <div className="text-xs text-gray-500">{ins.filiere}</div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-sm text-gray-600">{ins.email}</div>
+                          <div className="text-xs text-gray-500">{ins.telephone}</div>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-600">{ins.dateInscription}</td>
+                        <td className="px-6 py-4">
+                          <StatutBadge statut={ins.statut} />
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => setSelectedInscription(ins)}
+                              className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm font-medium"
+                            >
+                              Détails
+                            </button>
+                            <button
+                              onClick={() => setEditingStudent(ins)}
+                              className="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition text-sm font-medium"
+                            >
+                              Modifier
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+
 
   // Section Validation des Enseignants
   const SectionEnseignants = () => (
@@ -2579,55 +2853,55 @@ const ModalModificationEtudiant = () => {
                     {enseignants
                       .filter(ens => {
                         const matchSearch = ens.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                         ens.prenom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                         ens.email.toLowerCase().includes(searchTerm.toLowerCase());
+                          ens.prenom.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          ens.email.toLowerCase().includes(searchTerm.toLowerCase());
                         const matchFilter = filterStatus === 'all' || ens.statut === filterStatus;
                         const matchFiliere = filterFiliere === 'all' || ens.filiereEnseignee === filterFiliere;
                         return matchSearch && matchFilter && matchFiliere;
                       })
                       .map((ens) => (
-                      <tr key={ens.id} className="hover:bg-gray-50 transition">
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
-                              <User className="w-5 h-5 text-purple-600" />
+                        <tr key={ens.id} className="hover:bg-gray-50 transition">
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
+                                <User className="w-5 h-5 text-purple-600" />
+                              </div>
+                              <div>
+                                <div className="font-semibold text-gray-900">{ens.nom} {ens.prenom}</div>
+                                <div className="text-xs text-gray-500">{ens.email}</div>
+                              </div>
                             </div>
-                            <div>
-                              <div className="font-semibold text-gray-900">{ens.nom} {ens.prenom}</div>
-                              <div className="text-xs text-gray-500">{ens.email}</div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="text-sm font-medium text-gray-900">{ens.diplome}</div>
+                            <div className="text-xs text-gray-500">{ens.specialite}</div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="text-sm font-medium text-gray-900">{ens.filiereEnseignee}</div>
+                            <div className="text-xs text-gray-500">{ens.anneeExperience} ans d'expérience</div>
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-600">{ens.dateCandidature}</td>
+                          <td className="px-6 py-4">
+                            <StatutBadge statut={ens.statut} />
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => setSelectedEnseignant(ens)}
+                                className="px-3 py-1.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition text-sm font-medium"
+                              >
+                                Détails
+                              </button>
+                              <button
+                                onClick={() => setEditingEnseignant(ens)}
+                                className="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition text-sm font-medium"
+                              >
+                                Modifier
+                              </button>
                             </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="text-sm font-medium text-gray-900">{ens.diplome}</div>
-                          <div className="text-xs text-gray-500">{ens.specialite}</div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="text-sm font-medium text-gray-900">{ens.filiereEnseignee}</div>
-                          <div className="text-xs text-gray-500">{ens.anneeExperience} ans d'expérience</div>
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-600">{ens.dateCandidature}</td>
-                        <td className="px-6 py-4">
-                          <StatutBadge statut={ens.statut} />
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => setSelectedEnseignant(ens)}
-                              className="px-3 py-1.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition text-sm font-medium"
-                            >
-                              Détails
-                            </button>
-                            <button
-                              onClick={() => setEditingEnseignant(ens)}
-                              className="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition text-sm font-medium"
-                            >
-                              Modifier
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                          </td>
+                        </tr>
+                      ))}
                   </tbody>
                 </table>
               </div>
@@ -2653,17 +2927,17 @@ const ModalModificationEtudiant = () => {
             <div className="flex items-center gap-4">
               <div className="text-right">
                 <div className="text-sm text-gray-600">Connecté en tant que</div>
-                <div className="font-semibold text-gray-900"> { `${secretaire.nom +' '+ secretaire.prenom }` } ({ secretaire.role })</div>
+                <div className="font-semibold text-gray-900"> {`${secretaire.nom + ' ' + secretaire.prenom}`} ({secretaire.role})</div>
               </div>
               <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-lg">
-                 <span style={{textTransform:'uppercase'}}>S{secretaire.role?.charAt(0)}</span>
+                <span style={{ textTransform: 'uppercase' }}>S{secretaire.role?.charAt(0)}</span>
               </div>
-              <button 
-  onClick={handleLogout} 
-  className="bg-red-600 hover:bg-red-700 text-white font-medium px-4 py-2 rounded-lg shadow-md transition-all duration-200"
->
-  Se déconnecter
-</button>
+              <button
+                onClick={handleLogout}
+                className="bg-red-600 hover:bg-red-700 text-white font-medium px-4 py-2 rounded-lg shadow-md transition-all duration-200"
+              >
+                Se déconnecter
+              </button>
             </div>
           </div>
         </div>
@@ -2675,11 +2949,10 @@ const ModalModificationEtudiant = () => {
           <nav className="relative flex gap-1">
             <button
               onClick={() => setActiveTab('inscriptions')}
-              className={`px-6 py-4 font-semibold transition relative ${
-                activeTab === 'inscriptions'
-                  ? 'text-blue-600'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
+              className={`px-6 py-4 font-semibold transition relative ${activeTab === 'inscriptions'
+                ? 'text-blue-600'
+                : 'text-gray-600 hover:text-gray-900'
+                }`}
             >
               Validation des inscriptions
               {activeTab === 'inscriptions' && (
@@ -2688,11 +2961,10 @@ const ModalModificationEtudiant = () => {
             </button>
             <button
               onClick={() => setActiveTab('enseignants')}
-              className={`px-6 py-4 font-semibold transition relative ${
-                activeTab === 'enseignants'
-                  ? 'text-purple-600'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
+              className={`px-6 py-4 font-semibold transition relative ${activeTab === 'enseignants'
+                ? 'text-purple-600'
+                : 'text-gray-600 hover:text-gray-900'
+                }`}
             >
               Validation des enseignants
               {activeTab === 'enseignants' && (
@@ -2701,11 +2973,10 @@ const ModalModificationEtudiant = () => {
             </button>
             <button
               onClick={() => setActiveTab('documents')}
-              className={`px-6 py-4 font-semibold transition relative ${
-                activeTab === 'documents'
-                  ? 'text-blue-600'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
+              className={`px-6 py-4 font-semibold transition relative ${activeTab === 'documents'
+                ? 'text-blue-600'
+                : 'text-gray-600 hover:text-gray-900'
+                }`}
             >
               Gestion des documents
               {activeTab === 'documents' && (
@@ -2714,11 +2985,10 @@ const ModalModificationEtudiant = () => {
             </button>
             <button
               onClick={() => setActiveTab('autres')}
-              className={`px-6 py-4 font-semibold transition relative ${
-                activeTab === 'autres'
-                  ? 'text-blue-600'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
+              className={`px-6 py-4 font-semibold transition relative ${activeTab === 'autres'
+                ? 'text-blue-600'
+                : 'text-gray-600 hover:text-gray-900'
+                }`}
             >
               Autres actions
               {activeTab === 'autres' && (
@@ -2740,18 +3010,18 @@ const ModalModificationEtudiant = () => {
             </div>
             <h3 className="text-2xl font-bold text-gray-900 mb-3">Gestion des documents</h3>
             <p className="text-gray-600 max-w-md mx-auto">
-              La gestion des documents est maintenant intégrée dans les sections "Validation des inscriptions" 
-              et "Validation des enseignants". Vous pouvez uploader et gérer les documents directement depuis 
+              La gestion des documents est maintenant intégrée dans les sections "Validation des inscriptions"
+              et "Validation des enseignants". Vous pouvez uploader et gérer les documents directement depuis
               les détails de chaque étudiant ou enseignant.
             </p>
             <div className="flex gap-3 justify-center mt-6">
-              <button 
+              <button
                 onClick={() => setActiveTab('inscriptions')}
                 className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
               >
                 Voir les inscriptions
               </button>
-              <button 
+              <button
                 onClick={() => setActiveTab('enseignants')}
                 className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-medium"
               >
@@ -2783,6 +3053,59 @@ const ModalModificationEtudiant = () => {
       <ModalRefusEnseignant />
       <ModalValidationEnseignant />
       <ModalModificationEnseignant />
+
+      {/* Modal d'aperçu de fichier */}
+      {previewFile && (
+        <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-[100] p-4">
+          <div className="bg-white rounded-2xl max-w-5xl w-full max-h-[95vh] flex flex-col shadow-2xl relative">
+            <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+              <h3 className="text-xl font-bold text-gray-900">{previewFile.title}</h3>
+              <div className="flex gap-2">
+                <a
+                  href={previewFile.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                  title="Ouvrir dans un nouvel onglet"
+                >
+                  <Eye className="w-6 h-6" />
+                </a>
+                <button
+                  onClick={() => setPreviewFile(null)}
+                  className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition"
+                >
+                  <XCircle className="w-6 h-6" />
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-auto bg-gray-100 p-4 flex items-center justify-center">
+              {previewFile.type === 'pdf' ? (
+                <iframe
+                  src={previewFile.url}
+                  className="w-full h-full min-h-[70vh] rounded-lg shadow-inner"
+                  title="Aperçu PDF"
+                />
+              ) : (
+                <img
+                  src={previewFile.url}
+                  alt="Aperçu"
+                  className="max-w-full max-h-[75vh] object-contain rounded-lg shadow-lg"
+                />
+              )}
+            </div>
+
+            <div className="p-4 bg-gray-50 rounded-b-2xl flex justify-end">
+              <button
+                onClick={() => setPreviewFile(null)}
+                className="px-6 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition font-semibold"
+              >
+                Fermer l'aperçu
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Overlay de chargement global */}
       {globalLoading && (
